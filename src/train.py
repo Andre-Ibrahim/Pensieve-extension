@@ -5,15 +5,14 @@ from torch.utils.tensorboard import SummaryWriter
 from env import ABREnv
 import ppo2 as network
 import torch
-
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+from tqdm import trange
 
 S_DIM = [6, 8]
 A_DIM = 6
 ACTOR_LR_RATE = 1e-4
 NUM_AGENTS = 16
 TRAIN_SEQ_LEN = 1000  # take as a train batch
-TRAIN_EPOCH = 500000
+TRAIN_EPOCH = 100000
 MODEL_SAVE_INTERVAL = 300
 RANDOM_SEED = 42
 SUMMARY_DIR = './ppo'
@@ -93,7 +92,7 @@ def central_agent(net_params_queues, exp_queues):
             print('Model restored.')
         
         # while True:  # assemble experiences from agents, compute the gradients
-        for epoch in range(TRAIN_EPOCH):
+        for epoch in trange(TRAIN_EPOCH, desc="Training Epochs"):
             # synchronize the network parameters of work agent
             actor_net_params = actor.get_network_params()
             for i in range(NUM_AGENTS):
@@ -113,6 +112,8 @@ def central_agent(net_params_queues, exp_queues):
 
             actor.train(s_batch, a_batch, p_batch, v_batch, epoch)
             
+            print("training done for" + str(epoch))
+
             if epoch % MODEL_SAVE_INTERVAL == 0:
                 # Save the neural net parameters to disk.
                 actor.save_model(SUMMARY_DIR + '/nn_model_ep_' + str(epoch) + '.pth')
@@ -189,7 +190,6 @@ def main():
                                        exp_queues[i])))
     for i in range(NUM_AGENTS):
         agents[i].start()
-
     # wait unit training is done
     coordinator.join()
 
