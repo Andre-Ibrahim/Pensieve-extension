@@ -169,6 +169,20 @@ def main():
 
     np.random.seed(RANDOM_SEED)
     torch.set_num_threads(1)
+
+# Check if CUDA is available
+    if torch.cuda.is_available():
+        print("CUDA is available. PyTorch can use the GPU.")
+        print(f"CUDA version: {torch.version.cuda}")
+        print(f"Number of GPUs available: {torch.cuda.device_count()}")
+        
+        # Print details of each GPU
+        for i in range(torch.cuda.device_count()):
+            print(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+            
+    else:
+        print("CUDA is not available. PyTorch will use the CPU.")
+
     # inter-process communication queues
     net_params_queues = []
     exp_queues = []
