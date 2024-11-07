@@ -85,7 +85,7 @@ class Network():
         self.lr_rate = learning_rate
         self.optimizer = optim.Adam(list(self.actor.parameters()) + \
                                     list(self.critic.parameters()), lr=learning_rate)
-
+        
     def get_network_params(self):
         return [self.actor.state_dict(), self.critic.state_dict()]
     
@@ -120,6 +120,7 @@ class Network():
 
             self.optimizer.zero_grad()
             loss.backward()
+            torch.cuda.empty_cache()
             self.optimizer.step()
 
         # Update entropy weight

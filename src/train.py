@@ -10,7 +10,7 @@ from tqdm import trange
 S_DIM = [6, 8]
 A_DIM = 6
 ACTOR_LR_RATE = 1e-4
-NUM_AGENTS = 16
+NUM_AGENTS = 2
 TRAIN_SEQ_LEN = 1000  # take as a train batch
 TRAIN_EPOCH = 100000
 MODEL_SAVE_INTERVAL = 300
@@ -20,6 +20,7 @@ MODEL_DIR = './models'
 TRAIN_TRACES = './train/'
 TEST_LOG_FOLDER = './test_results/'
 LOG_FILE = SUMMARY_DIR + '/log'
+mp.set_start_method('spawn', force=True)
 
 # create result directory
 if not os.path.exists(SUMMARY_DIR):
