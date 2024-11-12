@@ -48,7 +48,7 @@ def bitrate_smo(outputs):
     plt.rcParams['axes.labelsize'] = 15
     font = {'size': 15}
     matplotlib.rc('font', **font)
-    fig, ax = plt.subplots(figsize=(6, 4))
+    fig, ax = plt.subplots(figsize=(8, 6))
     plt.subplots_adjust(left=0.14, bottom=0.16, right=0.96, top=0.96)
 
     max_bitrate = 0
@@ -192,7 +192,7 @@ def bitrate_rebuf(outputs):
     plt.rcParams['axes.labelsize'] = 15
     font = {'size': 15}
     matplotlib.rc('font', **font)
-    fig, ax = plt.subplots(figsize=(6, 4))
+    fig, ax = plt.subplots(figsize=(8, 6))
     plt.subplots_adjust(left=0.14, bottom=0.16, right=0.96, top=0.96)
 
     max_bitrate = 0
@@ -244,7 +244,7 @@ def bitrate_rebuf(outputs):
     ax.grid(linestyle='--', linewidth=1., alpha=0.5)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.legend(fontsize=12, ncol=3, edgecolor='white',loc='lower left')
+    ax.legend(fontsize=12, ncol=3, edgecolor='white',loc='lower right')
     ax.invert_xaxis()
 
     fig.savefig(outputs + '.png')
@@ -298,7 +298,7 @@ def qoe_cdf(outputs):
     ax.grid(linestyle='--', linewidth=1., alpha=0.5)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.legend(fontsize=12, ncol=3, edgecolor='white',loc='lower right')
+    ax.legend(fontsize=12, ncol=3, edgecolor='white',loc='upper left', bbox_to_anchor=(1.05, 1))
 
     fig.savefig(outputs + '.png')
     # fig.savefig(outputs + '.pdf')

@@ -135,7 +135,7 @@ class Network():
             return pi.numpy()
 
     def load_model(self, nn_model):
-        actor_model_params, critic_model_params = torch.load(nn_model)
+        actor_model_params, critic_model_params = torch.load(nn_model, weights_only=False)
         self.actor.load_state_dict(actor_model_params)
         self.critic.load_state_dict(critic_model_params)
 

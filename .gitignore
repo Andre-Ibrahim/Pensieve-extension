@@ -9,3 +9,5 @@ src/ppo/
 src/test_smo.py
 src/ppo-smo/
 src/venv/
+venv/
+src/raw_data/

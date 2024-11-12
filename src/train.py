@@ -10,14 +10,12 @@ from tqdm import trange
 S_DIM = [6, 8]
 A_DIM = 6
 ACTOR_LR_RATE = 1e-4
-NUM_AGENTS = 16
+NUM_AGENTS = 1
 TRAIN_SEQ_LEN = 1000  # take as a train batch
-TRAIN_EPOCH = 100000
+TRAIN_EPOCH = 156400
 MODEL_SAVE_INTERVAL = 300
 RANDOM_SEED = 42
-SUMMARY_DIR = './ppo'
-MODEL_DIR = './models'
-TRAIN_TRACES = './train/'
+SUMMARY_DIR = './ppo/realtime_6s_buffer_1ms_rtt/'
 TEST_LOG_FOLDER = './test_results/'
 LOG_FILE = SUMMARY_DIR + '/log'
 
@@ -111,8 +109,6 @@ def central_agent(net_params_queues, exp_queues):
             v_batch = np.vstack(r)
 
             actor.train(s_batch, a_batch, p_batch, v_batch, epoch)
-            
-            print("training done for" + str(epoch))
 
             if epoch % MODEL_SAVE_INTERVAL == 0:
                 # Save the neural net parameters to disk.
