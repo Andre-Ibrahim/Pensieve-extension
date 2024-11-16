@@ -21,6 +21,8 @@ RANDOM_SEED = 42
 RAND_RANGE = 1000
 EPS = 1e-6
 
+THROUGHPUT_UTILIZATION_REWARD = 0.5
+
 
 class ABREnv():
 
@@ -37,6 +39,9 @@ class ABREnv():
         
     def seed(self, num):
         np.random.seed(num)
+
+    def set_delay_penalty(self, delay_penalty):
+        self.delay_penalty = delay_penalty
 
     def reset(self):
         # self.net_env.reset_ptr()
@@ -81,23 +86,33 @@ class ABREnv():
         self.time_stamp += sleep_time  # in ms
 
         # reward is video quality - rebuffer penalty - smooth penalty
-        reward = VIDEO_BIT_RATE[bit_rate] / M_IN_K \
+
+        reward = THROUGHPUT_UTILIZATION_REWARD * VIDEO_BIT_RATE[bit_rate] / float(delay) \
             - REBUF_PENALTY * rebuf \
             - SMOOTH_PENALTY * np.abs(VIDEO_BIT_RATE[bit_rate] -
-                                      VIDEO_BIT_RATE[self.last_bit_rate]) / M_IN_K
+                                      VIDEO_BIT_RATE[self.last_bit_rate]) / M_IN_K \
 
         self.last_bit_rate = bit_rate
         state = np.roll(self.state, -1, axis=1)
 
         # this should be S_INFO number of terms
+        
         state[0, -1] = VIDEO_BIT_RATE[bit_rate] / \
             float(np.max(VIDEO_BIT_RATE))  # last quality
+
         state[1, -1] = self.buffer_size / BUFFER_NORM_FACTOR  # 10 sec
+
+
         state[2, -1] = float(video_chunk_size) / \
             float(delay) / M_IN_K  # kilo byte / ms
+
         state[3, -1] = float(delay) / M_IN_K / BUFFER_NORM_FACTOR  # 10 sec
+
+
         state[4, :A_DIM] = np.array(
             next_video_chunk_sizes) / M_IN_K / M_IN_K  # mega byte
+
+            
         state[5, -1] = np.minimum(video_chunk_remain,
                                   CHUNK_TIL_VIDEO_END_CAP) / float(CHUNK_TIL_VIDEO_END_CAP)
 

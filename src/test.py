@@ -1,6 +1,5 @@
 import os
 import sys
-os.environ['CUDA_VISIBLE_DEVICES']='-1'
 import numpy as np
 import load_trace
 #import a2c as network
@@ -22,10 +21,15 @@ SMOOTH_PENALTY = 1
 DEFAULT_QUALITY = 1  # default video quality without agent
 RANDOM_SEED = 42
 RAND_RANGE = 1000
-LOG_FILE = './test_results/log_sim_ppo'
 TEST_TRACES = './test/'
 # log in format of time_stamp bit_rate buffer_size rebuffer_time chunk_size download_time reward
 NN_MODEL = sys.argv[1]
+DELAY_PENALTY = float(sys.argv[2])
+epoch = sys.argv[3]
+
+THROUGHPUT_UTILIZATION_REWARD = 0.5
+
+LOG_FILE = f'./baselines/log_sim_ppo_plus'   
     
 def main():
 
@@ -81,6 +85,7 @@ def main():
                     - REBUF_PENALTY * rebuf \
                     - SMOOTH_PENALTY * np.abs(VIDEO_BIT_RATE[bit_rate] -
                                             VIDEO_BIT_RATE[last_bit_rate]) / M_IN_K
+                                            
 
         r_batch.append(reward)
 

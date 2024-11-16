@@ -6,7 +6,13 @@ from env import ABREnv
 import ppo2 as network
 import torch
 from tqdm import trange
+from ray import tune
+from ray import train
+from ray.tune.schedulers import ASHAScheduler
+mp.set_start_method("spawn", force=True)
 
+S_INFO = 6 
+S_LEN = 8
 S_DIM = [6, 8]
 A_DIM = 6
 ACTOR_LR_RATE = 1e-4
@@ -15,7 +21,7 @@ TRAIN_SEQ_LEN = 1000  # take as a train batch
 TRAIN_EPOCH = 156400
 MODEL_SAVE_INTERVAL = 300
 RANDOM_SEED = 42
-SUMMARY_DIR = './ppo/realtime_6s_buffer_1ms_rtt/'
+SUMMARY_DIR = './ppo/reward_throughput_utilization/'
 TEST_LOG_FOLDER = './test_results/'
 LOG_FILE = SUMMARY_DIR + '/log'
 
@@ -25,22 +31,21 @@ if not os.path.exists(SUMMARY_DIR):
 
 NN_MODEL = None    
 
-def testing(epoch, nn_model, log_file):
+def testing(epoch, nn_model, delay_penalty,log_file):
     # clean up the test results folder
-    os.system('rm -r ' + TEST_LOG_FOLDER)
     #os.system('mkdir ' + TEST_LOG_FOLDER)
 
-    if not os.path.exists(TEST_LOG_FOLDER):
-        os.makedirs(TEST_LOG_FOLDER)
+    if not os.path.exists(TEST_LOG_FOLDER + f"a_{epoch}"):
+        os.makedirs(TEST_LOG_FOLDER + f"a_{epoch}")
     # run test script
-    os.system('python test.py ' + nn_model)
+    os.system('python test.py ' + nn_model + ' ' + str(delay_penalty) + ' ' + str(epoch))
 
     # append test performance to the log
     rewards, entropies = [], []
-    test_log_files = os.listdir(TEST_LOG_FOLDER)
+    test_log_files = os.listdir(TEST_LOG_FOLDER + f"a_{epoch}")
     for test_log_file in test_log_files:
         reward, entropy = [], []
-        with open(TEST_LOG_FOLDER + test_log_file, 'rb') as f:
+        with open(TEST_LOG_FOLDER + f"a_{epoch}/" + test_log_file, 'rb') as f:
             for line in f:
                 parse = line.split()
                 try:
@@ -53,12 +58,21 @@ def testing(epoch, nn_model, log_file):
 
     rewards = np.array(rewards)
 
-    rewards_min = np.min(rewards)
-    rewards_5per = np.percentile(rewards, 5)
-    rewards_mean = np.mean(rewards)
-    rewards_median = np.percentile(rewards, 50)
-    rewards_95per = np.percentile(rewards, 95)
-    rewards_max = np.max(rewards)
+
+    rewards_min = 0
+    rewards_5per = 0
+    rewards_mean = 0
+    rewards_median = 0
+    rewards_95per = 0
+    rewards_max = 0
+
+    if len(rewards) != 0:
+        rewards_min = np.min(rewards)
+        rewards_5per = np.percentile(rewards, 5)
+        rewards_mean = np.mean(rewards)
+        rewards_median = np.percentile(rewards, 50)
+        rewards_95per = np.percentile(rewards, 95)
+        rewards_max = np.max(rewards)
 
     log_file.write(str(epoch) + '\t' +
                    str(rewards_min) + '\t' +
@@ -115,7 +129,7 @@ def central_agent(net_params_queues, exp_queues):
                 actor.save_model(SUMMARY_DIR + '/nn_model_ep_' + str(epoch) + '.pth')
                 
                 avg_reward, avg_entropy = testing(epoch,
-                    SUMMARY_DIR + '/nn_model_ep_' + str(epoch) + '.pth', 
+                    SUMMARY_DIR + '/nn_model_ep_' + str(epoch) + '.pth', 0.06446135782386013,
                     test_log_file)
 
                 writer.add_scalar('Entropy Weight', actor._entropy_weight, epoch)
@@ -128,6 +142,8 @@ def agent(agent_id, net_params_queue, exp_queue):
     env = ABREnv(agent_id)
     actor = network.Network(state_dim=S_DIM, action_dim=A_DIM,
                             learning_rate=ACTOR_LR_RATE)
+    
+    env.set_delay_penalty(0.4397092436106965)
 
     # initial synchronization of the network parameters from the coordinator
     actor_net_params = net_params_queue.get()
@@ -160,6 +176,64 @@ def agent(agent_id, net_params_queue, exp_queue):
 
         actor_net_params = net_params_queue.get()
         actor.set_network_params(actor_net_params)
+
+def train_model(config):
+
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+    writer = SummaryWriter(SUMMARY_DIR)
+    
+    env = ABREnv()
+    env.set_delay_penalty(config["delay_penalty"])
+    actor_critic = network.Network(state_dim=S_DIM, action_dim=A_DIM, learning_rate=ACTOR_LR_RATE)
+
+    np.random.seed(RANDOM_SEED)
+    torch.set_num_threads(1)
+
+    total_reward = 0
+
+    with open(LOG_FILE + '_test.txt', 'w') as test_log_file:
+        for epoch in trange(config["num_episodes"]):
+            obs = env.reset()
+            s_batch, a_batch, p_batch, r_batch = [], [], [], []
+            for step in range(TRAIN_SEQ_LEN):
+                s_batch.append(obs)
+
+                action_prob = actor_critic.predict(np.reshape(obs, (1, S_DIM[0], S_DIM[1])))
+
+                # gumbel noise
+                noise = np.random.gumbel(size=len(action_prob))
+                bit_rate = np.argmax(np.log(action_prob) + noise)
+
+                obs, rew, done, info = env.step(bit_rate)
+
+                action_vec = np.zeros(A_DIM)
+                action_vec[bit_rate] = 1
+                a_batch.append(action_vec)
+                r_batch.append(rew)
+                p_batch.append(action_prob)
+                if done:
+                    break
+
+            v_batch = actor_critic.compute_v(s_batch, a_batch, r_batch, done)
+            actor_critic.train(np.array(s_batch), np.array(a_batch), np.array(p_batch), np.array(v_batch), epoch)
+
+            total_reward += np.sum(r_batch)
+
+            if epoch % MODEL_SAVE_INTERVAL == 0:
+                # Save the neural net parameters to disk.
+                actor_critic.save_model(SUMMARY_DIR + '/nn_model_ep_' + str(epoch) + '.pth')
+        
+                avg_reward, avg_entropy = testing(epoch,
+                    SUMMARY_DIR + '/nn_model_ep_' + str(epoch) + '.pth', config["delay_penalty"],
+                    test_log_file)
+
+                writer.add_scalar('Entropy Weight', actor_critic._entropy_weight, epoch)
+                writer.add_scalar('Reward', avg_reward, epoch)
+                writer.add_scalar('Entropy', avg_entropy, epoch)
+                writer.flush()
+
+    train.report(dict(total_reward=total_reward))
 
 def main():
 
@@ -206,3 +280,24 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+    # used to train without multi-processing
+    #train_model({"delay_penalty": 0.06446135782386013, "num_episodes": TRAIN_EPOCH})
+    
+    # used for hyperparameter tuning
+
+    # search_space = {
+    # "delay_penalty": tune.uniform(0.0, 1),
+    # "num_episodes": 100000
+    # }
+        
+    # analysis = tune.run(
+    # train_model,
+    # config=search_space,
+    # num_samples=10,
+    # scheduler=ASHAScheduler(metric="total_reward", mode="max"),
+    # resources_per_trial={"cpu": 1, "gpu": 0} 
+    # )
+
+    # print("Best config: ", analysis.get_best_config(metric="total_reward", mode="max"))
