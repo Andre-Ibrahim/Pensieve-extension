@@ -3,19 +3,23 @@ import os
 import numpy as np
 import core as abrenv
 import load_trace
+import rewardFunctions as rf
 
 # bit_rate, buffer_size, next_chunk_size, bandwidth_measurement(throughput and time), chunk_til_video_end
+MILLISECONDS_IN_SECOND = 1000.0
 S_INFO = 6
 S_LEN = 8  # take how many frames in the past
-A_DIM = 6
+A_DIM = 9
 TRAIN_SEQ_LEN = 100  # take as a train batch
 MODEL_SAVE_INTERVAL = 100
-VIDEO_BIT_RATE = np.array([300., 750., 1200., 1850., 2850., 4300.])  # Kbps
+VIDEO_BIT_RATE = np.array([235., 375., 560., 750., 1050., 1750., 2350., 3000., 4300.])  # Kbps
 BUFFER_NORM_FACTOR = 10.0
-CHUNK_TIL_VIDEO_END_CAP = 48.0
+CHUNK_TIL_VIDEO_END_CAP = 500.0
 M_IN_K = 1000.0
 REBUF_PENALTY = 4.3  # 1 sec rebuffering -> 3 Mbps
 SMOOTH_PENALTY = 1
+DELAY_PENALTY = 1
+BUFFER_THRESH = 8.0 * MILLISECONDS_IN_SECOND 
 DEFAULT_QUALITY = 1  # default video quality without agent
 RANDOM_SEED = 42
 RAND_RANGE = 1000
@@ -33,21 +37,33 @@ class ABREnv():
 
         self.last_bit_rate = DEFAULT_QUALITY
         self.buffer_size = 0.
-        self.state = np.zeros((S_INFO, S_LEN))
+        self.state = np.zeros((S_INFO, A_DIM))
+        print(self.state)
+        self.alpha = 0.4
         
     def seed(self, num):
         np.random.seed(num)
+
+    def set_alpha(self, alpha):
+        self.alpha = alpha
+
+    def set_beta(self, beta):
+        self.beta = beta
+
+    def set_gamma(self, gamma):
+        self.gamma = gamma
 
     def reset(self):
         # self.net_env.reset_ptr()
         self.time_stamp = 0
         self.last_bit_rate = DEFAULT_QUALITY
-        self.state = np.zeros((S_INFO, S_LEN))
+        self.state = np.zeros((S_INFO, A_DIM))
+
         self.buffer_size = 0.
         bit_rate = self.last_bit_rate
         delay, sleep_time, self.buffer_size, rebuf, \
             video_chunk_size, next_video_chunk_sizes, \
-            end_of_video, video_chunk_remain = \
+            end_of_video, video_chunk_remain, switch_rate = \
             self.net_env.get_video_chunk(bit_rate)
         state = np.roll(self.state, -1, axis=1)
 
@@ -74,17 +90,14 @@ class ABREnv():
         # this is to make the framework similar to the real
         delay, sleep_time, self.buffer_size, rebuf, \
             video_chunk_size, next_video_chunk_sizes, \
-            end_of_video, video_chunk_remain = \
+            end_of_video, video_chunk_remain, switch_rate  = \
             self.net_env.get_video_chunk(bit_rate)
 
         self.time_stamp += delay  # in ms
         self.time_stamp += sleep_time  # in ms
 
         # reward is video quality - rebuffer penalty - smooth penalty
-        reward = VIDEO_BIT_RATE[bit_rate] / M_IN_K \
-            - REBUF_PENALTY * rebuf \
-            - SMOOTH_PENALTY * np.abs(VIDEO_BIT_RATE[bit_rate] -
-                                      VIDEO_BIT_RATE[self.last_bit_rate]) / M_IN_K
+        reward = rf.RearwardFunction.reward_with_buffer_no_rebuff_switch_rate(self.alpha, self.beta, self.gamma, bit_rate, self.last_bit_rate, rebuf, delay, self.buffer_size, switch_rate)
 
         self.last_bit_rate = bit_rate
         state = np.roll(self.state, -1, axis=1)

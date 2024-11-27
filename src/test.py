@@ -6,26 +6,36 @@ import load_trace
 #import a2c as network
 import ppo2 as network
 import fixed_env as env
+import rewardFunctions as rf
 
 
 S_INFO = 6  # bit_rate, buffer_size, next_chunk_size, bandwidth_measurement(throughput and time), chunk_til_video_end
 S_LEN = 8  # take how many frames in the past
-A_DIM = 6
+A_DIM = 9
 ACTOR_LR_RATE = 0.0001
 CRITIC_LR_RATE = 0.001
-VIDEO_BIT_RATE = [300,750,1200,1850,2850,4300]  # Kbps
+VIDEO_BIT_RATE = [235, 375, 560, 750, 1050, 1750, 2350, 3000, 4300]  # Kbps
 BUFFER_NORM_FACTOR = 10.0
 CHUNK_TIL_VIDEO_END_CAP = 48.0
 M_IN_K = 1000.0
 REBUF_PENALTY = 4.3  # 1 sec rebuffering -> 3 Mbps
 SMOOTH_PENALTY = 1
+DELAY_PENALTY = 10000
+BUFFER_THRESH = 8.0
 DEFAULT_QUALITY = 1  # default video quality without agent
 RANDOM_SEED = 42
 RAND_RANGE = 1000
-LOG_FILE = './test_results/log_sim_ppo'
-TEST_TRACES = './test/'
+TEST_TRACES = './test_heterogenous/'
 # log in format of time_stamp bit_rate buffer_size rebuffer_time chunk_size download_time reward
 NN_MODEL = sys.argv[1]
+
+ALPHA = float(sys.argv[2])
+BETA = float(sys.argv[3])
+GAMMA = float(sys.argv[4])
+
+epoch = sys.argv[5]
+name = sys.argv[6]
+LOG_FILE = f'./test_results/log_sim_ppo_{name}'
     
 def main():
 
@@ -42,7 +52,7 @@ def main():
     log_file = open(log_path, 'w')
 
 
-    actor = network.Network(state_dim=[S_INFO, S_LEN], action_dim=A_DIM,
+    actor = network.Network(state_dim=[S_INFO, A_DIM], action_dim=A_DIM,
         learning_rate=ACTOR_LR_RATE)
 
     # restore neural net parameters
@@ -58,7 +68,7 @@ def main():
     action_vec = np.zeros(A_DIM)
     action_vec[bit_rate] = 1
 
-    s_batch = [np.zeros((S_INFO, S_LEN))]
+    s_batch = [np.zeros((S_INFO, A_DIM))]
     a_batch = [action_vec]
     r_batch = []
     entropy_record = []
@@ -70,17 +80,21 @@ def main():
         # this is to make the framework similar to the real
         delay, sleep_time, buffer_size, rebuf, \
         video_chunk_size, next_video_chunk_sizes, \
-        end_of_video, video_chunk_remain = \
+        end_of_video, video_chunk_remain, switch_rate = \
             net_env.get_video_chunk(bit_rate)
 
         time_stamp += delay  # in ms
         time_stamp += sleep_time  # in ms
 
         # reward is video quality - rebuffer penalty - smoothness
-        reward = VIDEO_BIT_RATE[bit_rate] / M_IN_K \
-                    - REBUF_PENALTY * rebuf \
-                    - SMOOTH_PENALTY * np.abs(VIDEO_BIT_RATE[bit_rate] -
-                                            VIDEO_BIT_RATE[last_bit_rate]) / M_IN_K
+        # reward = (VIDEO_BIT_RATE[bit_rate] / 4300 + buffer_size / BUFFER_THRESH) \
+        #             - REBUF_PENALTY * rebuf \
+        #             - SMOOTH_PENALTY * np.abs(VIDEO_BIT_RATE[bit_rate] -
+        #                                     VIDEO_BIT_RATE[last_bit_rate]) / M_IN_K \
+        #             - delay / M_IN_K / BUFFER_NORM_FACTOR
+        
+        reward = rf.RearwardFunction.reward_with_buffer_no_rebuff_switch_rate(ALPHA, BETA, GAMMA, bit_rate, last_bit_rate, rebuf, delay, buffer_size, switch_rate)
+
 
         r_batch.append(reward)
 
@@ -99,7 +113,7 @@ def main():
 
         # retrieve previous state
         if len(s_batch) == 0:
-            state = [np.zeros((S_INFO, S_LEN))]
+            state = [np.zeros((S_INFO, A_DIM))]
         else:
             state = np.array(s_batch[-1], copy=True)
 
@@ -114,7 +128,7 @@ def main():
         state[4, :A_DIM] = np.array(next_video_chunk_sizes) / M_IN_K / M_IN_K  # mega byte
         state[5, -1] = np.minimum(video_chunk_remain, CHUNK_TIL_VIDEO_END_CAP) / float(CHUNK_TIL_VIDEO_END_CAP)
 
-        action_prob = actor.predict(np.reshape(state, (1, S_INFO, S_LEN)))
+        action_prob = actor.predict(np.reshape(state, (1, S_INFO, A_DIM)))
         noise = np.random.gumbel(size=len(action_prob))
         bit_rate = np.argmax(np.log(action_prob) + noise)
         
@@ -136,7 +150,7 @@ def main():
             action_vec = np.zeros(A_DIM)
             action_vec[bit_rate] = 1
 
-            s_batch.append(np.zeros((S_INFO, S_LEN)))
+            s_batch.append(np.zeros((S_INFO, A_DIM)))
             a_batch.append(action_vec)
             # print(np.mean(entropy_record))
             entropy_record = []

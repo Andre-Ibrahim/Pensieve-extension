@@ -5,14 +5,14 @@ B_IN_MB = 1000000.0
 BITS_IN_BYTE = 8.0
 RANDOM_SEED = 42
 VIDEO_CHUNCK_LEN = 4000.0  # millisec, every time add this amount to buffer
-BITRATE_LEVELS = 6
-TOTAL_VIDEO_CHUNCK = 48
-BUFFER_THRESH = 60.0 * MILLISECONDS_IN_SECOND  # millisec, max buffer limit
+BITRATE_LEVELS = 9
+TOTAL_VIDEO_CHUNCK = 500
+BUFFER_THRESH = 8.0 * MILLISECONDS_IN_SECOND  # millisec, max buffer limit
 DRAIN_BUFFER_SLEEP_TIME = 500.0  # millisec
 PACKET_PAYLOAD_PORTION = 0.95
 LINK_RTT = 80  # millisec
 PACKET_SIZE = 1500  # bytes
-VIDEO_SIZE_FILE = './envivio/video_size_'
+VIDEO_SIZE_FILE = './video_data/video_size_'
 
 
 class Environment:
@@ -153,6 +153,13 @@ class Environment:
         for i in range(BITRATE_LEVELS):
             next_video_chunk_sizes.append(self.video_size[i][self.video_chunk_counter])
 
+        # calculating switch_rate with self.mahimahi_ptr and self.cooked_bw for the past 10 seconds
+        switch_rate = 0
+        if self.mahimahi_ptr >= 10:
+            switch_rate = np.sum(np.ediff1d(self.cooked_bw[self.mahimahi_ptr - 10:self.mahimahi_ptr]) > 0) / 10
+        else:
+            switch_rate = 1.0
+
         return delay, \
             sleep_time, \
             return_buffer_size / MILLISECONDS_IN_SECOND, \
@@ -160,4 +167,5 @@ class Environment:
             video_chunk_size, \
             next_video_chunk_sizes, \
             end_of_video, \
-            video_chunk_remain
+            video_chunk_remain, \
+            switch_rate

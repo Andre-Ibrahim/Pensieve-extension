@@ -1,0 +1,19 @@
+Trial status: 10 TERMINATED
+Current time: 2024-11-18 11:12:13. Total running time: 1hr 0min 12s
+Logical resource usage: 1.0/10 CPUs, 0/0 GPUs
+╭─────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Trial name                   status          alpha     iter     total time (s)     total_reward │
+├─────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ tune_parameter_761d9_00000   TERMINATED   0.843379        1            3553.23     -7.81781e+06 │
+│ tune_parameter_761d9_00001   TERMINATED   0.229991        1            3609.96     -5.33954e+06 │
+│ tune_parameter_761d9_00002   TERMINATED   0.347702        1            3544.95     -6.08827e+06 │
+│ tune_parameter_761d9_00003   TERMINATED   0.572087        1            3533.38     -6.09216e+06 │
+│ tune_parameter_761d9_00004   TERMINATED   0.367791        1            3581.04     -6.02903e+06 │
+│ tune_parameter_761d9_00005   TERMINATED   0.618054        1            3570.03     -7.21468e+06 │
+│ tune_parameter_761d9_00006   TERMINATED   0.360765        1            3568.52     -5.7134e+06  │
+│ tune_parameter_761d9_00007   TERMINATED   0.987646        1            3537.59     -8.26165e+06 │
+│ tune_parameter_761d9_00008   TERMINATED   0.339489        1            3541.53     -5.6845e+06  │
+│ tune_parameter_761d9_00009   TERMINATED   0.513665        1            3559.94     -6.45722e+06 │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+Best config:  {'alpha': 0.22999076353128067, 'num_episodes': 100000}

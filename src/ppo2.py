@@ -116,6 +116,7 @@ class Network():
             dual_loss = torch.where(adv < 0, torch.max(ppo2loss, 3. * adv), ppo2loss)
             loss_entropy = torch.sum(-pi * torch.log(pi), dim=1, keepdim=True)
 
+            #val = val.view(-1)
             loss = -dual_loss.mean() + 10. * F.mse_loss(val, v_batch) - self._entropy_weight * loss_entropy.mean()
 
             self.optimizer.zero_grad()

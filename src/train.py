@@ -7,20 +7,29 @@ import ppo2 as network
 import torch
 from tqdm import trange
 
-S_DIM = [6, 8]
-A_DIM = 6
+from ray import tune
+from ray import train
+from ray.tune.schedulers import ASHAScheduler
+
+S_DIM = [6, 9]
+A_DIM = 9
 ACTOR_LR_RATE = 1e-4
-NUM_AGENTS = 2
+NUM_AGENTS = 1
 TRAIN_SEQ_LEN = 1000  # take as a train batch
-TRAIN_EPOCH = 100000
-MODEL_SAVE_INTERVAL = 300
+TRAIN_EPOCH = 80001
+MODEL_SAVE_INTERVAL = 10000
 RANDOM_SEED = 42
-SUMMARY_DIR = './ppo'
+NAME = 'heterogenous_switch_rate_tuned'
+SUMMARY_DIR = f'./ppo/{NAME}'
 MODEL_DIR = './models'
-TRAIN_TRACES = './train/'
+TRAIN_TRACES = './train_hetereogenous/'
 TEST_LOG_FOLDER = './test_results/'
 LOG_FILE = SUMMARY_DIR + '/log'
 mp.set_start_method('spawn', force=True)
+
+ALPHA = 0.7423670839830001
+BETA = 0.2103330633886542
+GAMMA = 0.687558586653879
 
 # create result directory
 if not os.path.exists(SUMMARY_DIR):
@@ -28,15 +37,15 @@ if not os.path.exists(SUMMARY_DIR):
 
 NN_MODEL = None    
 
-def testing(epoch, nn_model, log_file):
+def testing(epoch, nn_model, log_file, alpha=ALPHA, beta=BETA, gamma=GAMMA):
     # clean up the test results folder
-    os.system('rm -r ' + TEST_LOG_FOLDER)
+    #os.system('rm -r ' + TEST_LOG_FOLDER + f"a_{epoch}/")
     #os.system('mkdir ' + TEST_LOG_FOLDER)
 
     if not os.path.exists(TEST_LOG_FOLDER):
         os.makedirs(TEST_LOG_FOLDER)
     # run test script
-    os.system('python test.py ' + nn_model)
+    os.system(f'python test.py {nn_model} {str(alpha)} {str(beta)} {str(gamma)} {str(epoch)} {NAME}')
 
     # append test performance to the log
     rewards, entropies = [], []
@@ -56,12 +65,20 @@ def testing(epoch, nn_model, log_file):
 
     rewards = np.array(rewards)
 
-    rewards_min = np.min(rewards)
-    rewards_5per = np.percentile(rewards, 5)
-    rewards_mean = np.mean(rewards)
-    rewards_median = np.percentile(rewards, 50)
-    rewards_95per = np.percentile(rewards, 95)
-    rewards_max = np.max(rewards)
+    rewards_min = 0
+    rewards_5per = 0
+    rewards_mean = 0
+    rewards_median = 0
+    rewards_95per = 0
+    rewards_max = 0
+
+    if len(rewards) != 0:
+        rewards_min = np.min(rewards)
+        rewards_5per = np.percentile(rewards, 5)
+        rewards_mean = np.mean(rewards)
+        rewards_median = np.percentile(rewards, 50)
+        rewards_95per = np.percentile(rewards, 95)
+        rewards_max = np.max(rewards)
 
     log_file.write(str(epoch) + '\t' +
                    str(rewards_min) + '\t' +
@@ -119,7 +136,7 @@ def central_agent(net_params_queues, exp_queues):
                 
                 avg_reward, avg_entropy = testing(epoch,
                     SUMMARY_DIR + '/nn_model_ep_' + str(epoch) + '.pth', 
-                    test_log_file)
+                    test_log_file, ALPHA)
 
                 writer.add_scalar('Entropy Weight', actor._entropy_weight, epoch)
                 writer.add_scalar('Reward', avg_reward, epoch)
@@ -129,6 +146,11 @@ def central_agent(net_params_queues, exp_queues):
 
 def agent(agent_id, net_params_queue, exp_queue):
     env = ABREnv(agent_id)
+    
+    env.set_alpha(ALPHA)
+    env.set_beta(BETA)
+    env.set_gamma(GAMMA)
+
     actor = network.Network(state_dim=S_DIM, action_dim=A_DIM,
                             learning_rate=ACTOR_LR_RATE)
 
@@ -169,7 +191,7 @@ def main():
     np.random.seed(RANDOM_SEED)
     torch.set_num_threads(1)
 
-# Check if CUDA is available
+    # Check if CUDA is available
     if torch.cuda.is_available():
         print("CUDA is available. PyTorch can use the GPU.")
         print(f"CUDA version: {torch.version.cuda}")
