@@ -10,3 +10,5 @@ src/test_smo.py
 src/ppo-smo/
 src/venv/
 /venv/
+
+*node_modules/
