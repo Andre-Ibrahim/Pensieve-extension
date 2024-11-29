@@ -11,4 +11,6 @@ src/ppo-smo/
 src/venv/
 /venv/
 
-*node_modules/
+/node_modules/
+
+Visualization/node_modules/
