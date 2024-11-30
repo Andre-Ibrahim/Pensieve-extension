@@ -19,7 +19,7 @@ TRAIN_SEQ_LEN = 1000  # take as a train batch
 TRAIN_EPOCH = 80001
 MODEL_SAVE_INTERVAL = 10000
 RANDOM_SEED = 42
-NAME = 'heterogenous_switch_rate_tuned'
+NAME = 'heterogenous_switch_rate_tuned2_new_bitrate'
 SUMMARY_DIR = f'./ppo/{NAME}'
 MODEL_DIR = './models'
 TRAIN_TRACES = './train_hetereogenous/'
@@ -27,9 +27,9 @@ TEST_LOG_FOLDER = './test_results/'
 LOG_FILE = SUMMARY_DIR + '/log'
 mp.set_start_method('spawn', force=True)
 
-ALPHA = 0.7423670839830001
-BETA = 0.2103330633886542
-GAMMA = 0.687558586653879
+ALPHA = 0.8170262751188082
+BETA = 0.0022840214229752354
+GAMMA = 0.27566949441816124
 
 # create result directory
 if not os.path.exists(SUMMARY_DIR):

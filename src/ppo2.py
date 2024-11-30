@@ -8,6 +8,9 @@ FEATURE_NUM = 128
 ACTION_EPS = 1e-4
 GAMMA = 0.99
 EPS = 0.2  # PPO2 epsilon
+S_INFO = 6  # bit_rate, buffer_size, next_chunk_size, bandwidth_measurement(throughput and time), chunk_til_video_end
+S_LEN = 8  # take how many frames in the past
+A_DIM = 9
 
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -144,6 +147,39 @@ class Network():
     def save_model(self, nn_model):
         model_params = [self.actor.state_dict(), self.critic.state_dict()]
         torch.save(model_params, nn_model)
+
+    def save_in_onnx(self, nn_model):
+        actor_model_params, _ = torch.load(nn_model)
+
+        dummy_state = np.zeros((S_INFO, A_DIM), dtype=np.float32)
+
+        print(dummy_state)
+
+        state_dim = (S_INFO, A_DIM)  # Define S_INFO and A_DIM
+        action_dim = A_DIM
+        actor = Actor(state_dim, action_dim)
+        actor.load_state_dict(actor_model_params)
+        actor.eval()  # Set the model to evaluation mode
+        
+        # Create the dummy input
+        dummy_state = np.zeros((1, S_INFO, A_DIM), dtype=np.float32)  # Add batch dimension
+        dummy_state[0, 0, -1] = 1.0  # Example normalized last quality
+        dummy_state[0, 1, -1] = 0.5  # Example normalized buffer size
+        dummy_state[0, 2, -1] = 0.2  # Example normalized throughput
+        dummy_state[0, 3, -1] = 0.1  # Example normalized delay
+        dummy_state[0, 4, :A_DIM] = np.linspace(0.1, 0.6, A_DIM)  # Example chunk sizes
+        dummy_state[0, 5, -1] = 0.8
+
+        dummy_input = torch.tensor(dummy_state, dtype=torch.float32)
+
+        torch.onnx.export(
+            actor, 
+            dummy_input, 
+            f"../Visualization/onnx/{nn_model.split("/")[-2]}.onnx",
+            export_params=True,
+            opset_version=11,
+            input_names=["input"], output_names=["output"]
+        )
 
     def compute_v(self, s_batch, a_batch, r_batch, terminal):
         R_batch = np.zeros_like(r_batch)

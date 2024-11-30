@@ -1,6 +1,6 @@
 import numpy as np
 
-VIDEO_BIT_RATE = [235, 375, 560, 750, 1050, 1750, 2350, 3000, 4300]
+VIDEO_BIT_RATE = [200, 300, 480, 750, 1200, 1850, 2850, 4300, 5300]
 BUFFER_NORM_FACTOR = 10.0
 
 M_IN_K = 1000.0
@@ -47,3 +47,9 @@ class RearwardFunction:
         return (alpha * VIDEO_BIT_RATE[bit_rate] / VIDEO_BIT_RATE[-1] + (1 - alpha) * buffer_size / BUFFER_THRESH) \
                 - (beta / (switch_rate + 0.0001)) * SMOOTH_PENALTY * np.abs(VIDEO_BIT_RATE[bit_rate] - VIDEO_BIT_RATE[last_bit_rate]) / M_IN_K \
                 - (gamma) * delay / M_IN_K / BUFFER_NORM_FACTOR
+    
+
+    def reward3(alpha, beta, gamma, bit_rate, last_bit_rate, rebuf, delay, buffer_size, switch_rate):
+        return VIDEO_BIT_RATE[bit_rate] / 4300\
+                - alpha * REBUF_PENALTY * rebuf \
+                - (beta / (switch_rate + 0.0001)) * SMOOTH_PENALTY * np.abs(VIDEO_BIT_RATE[bit_rate] - VIDEO_BIT_RATE[last_bit_rate]) / M_IN_K

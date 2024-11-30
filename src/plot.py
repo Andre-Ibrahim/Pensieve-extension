@@ -17,12 +17,14 @@ K_IN_M = 1000.0
 REBUF_P = 4.3
 SMOOTH_P = 1
 
+ChunkSize = 4
+
 # labels = SCHEMES#, 'RB']
 LW = 1.5
 LOG = './baselines/'
 
-SCHEMES = ['alpha_40_hete_vid', 'retrain_vs_heterogenous', 'heterogenous_switch_rate_beta_25', 'alpha_25_buff_size_no_delay', 'alpha_40_buff_size_no_delay', 'alpha_30_buff_size_no_delay', 'alpha_325_buff_size_no_delay', 'heterogenous_switch_rate', 'retrain_hete_vid']
-labels = ['alpha_40_hete_vid', 'ret_vs_het', 'hete_swi_ra_beta_25', 'alpha_25', 'alpha_40', 'alpha_30', 'alpha_325', 'heterogenous_switch_rate', 'retrain_hete_vid']
+SCHEMES = ['hete_switch_rate_tuned_new_bitrate_10k', 'hete_switch_rate_tune_nbr', 'heterogenous_switch_rate_beta_25', 'heterogenous_switch_rate_tuned', 'heterogenous_switch_rate_tuned_no_smootheness', 'heterogenous_switch_rate_only', 'alpha_325_buff_size_no_delay', 'heterogenous_switch_rate', 'retrain_hete_vid']
+labels = ['hete_swi_rat_tu_n_br', 'hete_switch_rate_tune_nbr', 'hete_swi_ra_beta_25', 'hete_swi_rate_tuned', 'hete_swi_rat_tu_no_smo', 'hete_swi_rate_only', 'alpha_325', 'hete_switch_rate', 'retrain_hete_vid']
 lines = ['-', '--', '-.', ':', '-', '--', ':', '--', ':', '-']  # '--', '-.', ':', '-', '--'
 modern_academic_colors = ['#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F', '#EDC948', '#FF9DA7', '#9C755F', '#000000']  # '#59A14F', '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F'
 
@@ -317,7 +319,7 @@ def rebuffering_vs_time(outputs):
     matplotlib.rc('font', **font)
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    ax.set_ylim(0, 2)
+    ax.set_ylim(0, 200)
 
     plt.subplots_adjust(left=0.14, bottom=0.16, right=0.96, top=0.96)
 
@@ -359,11 +361,15 @@ def rebuffering_vs_time(outputs):
         # Calculate mean rebuffering times
         mean_rebuffer = summed_rebuffer / counts
 
-        # Plot rebuffering vs. time
-        ax.plot(range(max_time_length), mean_rebuffer, label=labels[idx], linestyle=lines[idx], color=modern_academic_colors[idx])
+        cumulative_rebuffer = np.cumsum(mean_rebuffer)
 
-    ax.set_xlabel('# chunk delivery', color='#000000')
-    ax.set_ylabel('average rebuffering', color='#000000')
+        time_in_seconds = np.arange(0, max_time_length * 4, 4)
+
+        # Plot rebuffering vs. time
+        ax.plot(time_in_seconds, cumulative_rebuffer, label=labels[idx], linestyle=lines[idx], color=modern_academic_colors[idx])
+
+    ax.set_xlabel('seconds', color='#000000')
+    ax.set_ylabel('cumulative rebuffering', color='#000000')
 
     ax.grid(linestyle='--', linewidth=1., alpha=0.5, color='#000000')
     ax.spines['top'].set_visible(False)
@@ -419,10 +425,12 @@ def average_quality_per_second(outputs):
         # Calculate mean quality
         mean_quality = summed_quality / counts
 
-        # Plot average quality per second
-        ax.plot(range(max_time_length), mean_quality, label=labels[idx], linestyle=lines[idx], color=modern_academic_colors[idx])
+        time_in_seconds = np.arange(0, max_time_length * 4, 4)
 
-    ax.set_xlabel('# chunk delivery', color='#000000')
+        # Plot average quality per second
+        ax.plot(time_in_seconds, mean_quality, label=labels[idx], linestyle=lines[idx], color=modern_academic_colors[idx])
+
+    ax.set_xlabel('seconds', color='#000000')
     ax.set_ylabel('Average Quality (Mbps)', color='#000000')
 
     ax.grid(linestyle='--', linewidth=1., alpha=0.5, color='#000000')
@@ -481,10 +489,12 @@ def average_smothness_per_second(outputs):
         # Calculate mean quality
         mean_quality = summed_smo / counts
 
-        # Plot average quality per second
-        ax.plot(range(max_time_length), summed_smo, label=labels[idx], linestyle=lines[idx], color=modern_academic_colors[idx])
+        time_in_seconds = np.arange(0, max_time_length * 4, 4)
 
-    ax.set_xlabel('# chunk delivery', color='#000000')
+        # Plot average quality per second
+        ax.plot(time_in_seconds, summed_smo, label=labels[idx], linestyle=lines[idx], color=modern_academic_colors[idx])
+
+    ax.set_xlabel('seconds', color='#000000')
     ax.set_ylabel('smotheness', color='#000000')
 
     ax.grid(linestyle='--', linewidth=1., alpha=0.5, color='#000000')
@@ -493,6 +503,84 @@ def average_smothness_per_second(outputs):
     ax.legend(fontsize=12, ncol=3, edgecolor='white', loc='upper right')
 
     fig.savefig(outputs + '_smo_per_chunk.png')
+    plt.close()
+
+def quality_per_second(outputs):
+    label = 'hete_switch_rate_tune_nbr'
+    # os.system('cp ./test_results/* ' + LOG)
+    markers = ['o','x','v','^','>','<','s','p','*','h','H','D','d','1']
+    
+    plt.rcParams['axes.labelsize'] = 15
+    font = {'size': 15}
+    matplotlib.rc('font', **font)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    plt.subplots_adjust(left=0.14, bottom=0.16, right=0.96, top=0.96)
+
+    ax.set_ylim(0, 6)
+
+    time_all = []
+    quality_all = []
+    logfiles = os.listdir(LOG)
+
+    lf = ""
+
+    count = 0
+    for logfile in logfiles:
+        #print(logfile)
+        if label in logfile:
+            print(count)
+            if count <= 2:
+                count += 1
+                continue
+
+            lf = logfile
+            break
+    
+    print(lf)
+    file_scheme = LOG + '/' + lf
+
+    with open(file_scheme, 'r') as f:
+        time = []
+        quality = []
+        t1 = float(f.readline().split()[0])
+        for line in f:
+            sp = line.split()
+            if len(sp) > 1:
+                time.append(float(sp[0]) - t1)
+                quality.append(float(sp[1]) / 1000.0) 
+    time_all.append(time)
+    quality_all.append(quality)
+
+    # Find the maximum time length to align all quality times
+    max_time_length = max(len(t) for t in time_all)
+
+    # Initialize arrays to store summed quality and counts
+    summed_quality = np.zeros(max_time_length)
+    counts = np.zeros(max_time_length)
+
+    # Sum quality and counts for each time point
+    for time, quality in zip(time_all, quality_all):
+        for i, t in enumerate(time):
+            summed_quality[i] += quality[i]
+            counts[i] += 1
+
+    # Calculate mean quality
+    mean_quality = summed_quality / counts
+
+    time_in_seconds = np.arange(0, max_time_length * 4, 4)
+
+    # Plot average quality per second
+    ax.plot(time_in_seconds, mean_quality, label=label, linestyle=lines[3], color=modern_academic_colors[3])
+
+    ax.set_xlabel('seconds', color='#000000')
+    ax.set_ylabel('Average Quality (Mbps)', color='#000000')
+
+    ax.grid(linestyle='--', linewidth=1., alpha=0.5, color='#000000')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.legend(fontsize=12, ncol=3, edgecolor='white', loc='upper right')
+
+    fig.savefig(outputs + 'q_per_chunk.png')
     plt.close()
 
 if __name__ == '__main__':
@@ -504,3 +592,5 @@ if __name__ == '__main__':
     rebuffering_vs_time('homogenous')
     average_quality_per_second('homogenous')
     average_smothness_per_second('homogenous')
+
+    quality_per_second('one')
