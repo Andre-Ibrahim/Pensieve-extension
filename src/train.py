@@ -27,6 +27,7 @@ TEST_LOG_FOLDER = './test_results/'
 LOG_FILE = SUMMARY_DIR + '/log'
 mp.set_start_method('spawn', force=True)
 
+# Hyperparameters to the reward function
 ALPHA = 0.8170262751188082
 BETA = 0.20
 GAMMA = 0.27566949441816124

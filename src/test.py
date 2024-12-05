@@ -15,7 +15,6 @@ A_DIM = 9
 ACTOR_LR_RATE = 0.0001
 CRITIC_LR_RATE = 0.001
 VIDEO_BIT_RATE = [200, 300, 480, 750, 1200, 1850, 2850, 4300, 5300]  # Kbps
-# [200, 300, 480, 750, 1200, 1850, 2850, 4300, 5300]
 BUFFER_NORM_FACTOR = 10.0
 CHUNK_TIL_VIDEO_END_CAP = 1000
 M_IN_K = 1000.0
@@ -95,12 +94,6 @@ def main():
         time_stamp += delay  # in ms
         time_stamp += sleep_time  # in ms
 
-        # reward is video quality - rebuffer penalty - smoothness
-        # reward = (VIDEO_BIT_RATE[bit_rate] / 4300 + buffer_size / BUFFER_THRESH) \
-        #             - REBUF_PENALTY * rebuf \
-        #             - SMOOTH_PENALTY * np.abs(VIDEO_BIT_RATE[bit_rate] -
-        #                                     VIDEO_BIT_RATE[last_bit_rate]) / M_IN_K \
-        #             - delay / M_IN_K / BUFFER_NORM_FACTOR
         reward = rf.RearwardFunction.reward5(ALPHA, BETA, GAMMA, bit_rate, last_bit_rate, rebuf, delay, buffer_size, switch_rate)
 
         r_batch.append(reward)
@@ -129,18 +122,11 @@ def main():
 
         # this should be S_INFO number of terms
         state[0, -1] = VIDEO_BIT_RATE[bit_rate] / float(np.max(VIDEO_BIT_RATE))  # last quality
-        print("state 0", state[0])
         state[1, -1] = buffer_size / BUFFER_NORM_FACTOR  # 10 sec
-        print("state 1", state[1])
         state[2, -1] = float(video_chunk_size) / float(delay) / M_IN_K  # kilo byte / ms
-        print("delay", delay)
-        print("state 2", state[2])
         state[3, -1] = float(delay) / M_IN_K / BUFFER_NORM_FACTOR  # 10 sec
-        print("state 3", state[3])
         state[4, :A_DIM] = np.array(next_video_chunk_sizes) / M_IN_K / M_IN_K  # mega byte
-        print("state 4", state[4])
         state[5, -1] = np.minimum(video_chunk_remain, CHUNK_TIL_VIDEO_END_CAP) / float(CHUNK_TIL_VIDEO_END_CAP)
-        print("state 5", state[5])
         action_prob = actor.predict(np.reshape(state, (1, S_INFO, A_DIM)))
 
         noise = np.random.gumbel(size=len(action_prob))

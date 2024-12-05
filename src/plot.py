@@ -23,9 +23,6 @@ ChunkSize = 4
 LW = 1.5
 LOG = './baselines/'
 
-#SCHEMES = ['hetereogenous_reward5_experiment3', 'hete_switch_rate_tune_nbr', 'heterogenous_switch_rate_beta_25', 'heterogenous_switch_rate_tuned', 'heterogenous_switch_rate_tuned_no_smootheness', 'retrained_200Mbps_br_only', 'switch_rate_tuned2_new_br_more_traces', 'heterogenous_switch_rate', 'retrain_hete_vid']
-
-# SCHEMES = ['hetereogenous_reward5_experiment2', 'hetereogenous_reward5_experiment2_200Mbps_control', 'retrain_hete_vid']
 
 SCHEMES = ['hetereogenous_reward5_experiment2', 'hetereogenous_reward5_experiment2_200Mbps_control', 'hetereogenous_reward5_experiment4_rebuf2', 'hetereogenous_reward5_experiment4_rebuf0']
 #labels = ['hete_rew_exp', 'he_sw_ra_tu_nbr', 'hete_swi_ra_beta_25', 'hete_swi_rate_tuned', 'hete_swi_rat_tu_no_smo', 'retrained_200Mbps_br_only', 'swi_rate_tu2_nbr_mt', 'hete_switch_rate', 'retrain_hete_vid']
@@ -591,14 +588,17 @@ def quality_per_second(outputs):
 
 if __name__ == '__main__':
     os.system('cp ./test_results/* ' + LOG)
+
+    # these are the old plots from pensieve-ppo 
+    # can be used if desired but the new plots are more informative for our use case
+
     # bitrate_rebuf('baselines-br')
     # smo_rebuf('baselines-sr')
     # bitrate_smo('baselines-bs')
     # qoe_cdf('baselines-qoe')
     
-    
-    rebuffering_vs_time('homogenous')
-    average_quality_per_second('homogenous')
-    average_smothness_per_second('homogenous')
+    rebuffering_vs_time('hete')
+    average_quality_per_second('hete')
+    average_smothness_per_second('hete')
 
     quality_per_second('one')

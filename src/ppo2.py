@@ -162,12 +162,12 @@ class Network():
         actor.eval()  # Set the model to evaluation mode
         
         # Create the dummy input
-        dummy_state = np.zeros((1, S_INFO, A_DIM), dtype=np.float32)  # Add batch dimension
-        dummy_state[0, 0, -1] = 1.0  # Example normalized last quality
-        dummy_state[0, 1, -1] = 0.5  # Example normalized buffer size
-        dummy_state[0, 2, -1] = 0.2  # Example normalized throughput
-        dummy_state[0, 3, -1] = 0.1  # Example normalized delay
-        dummy_state[0, 4, :A_DIM] = np.linspace(0.1, 0.6, A_DIM)  # Example chunk sizes
+        dummy_state = np.zeros((1, S_INFO, A_DIM), dtype=np.float32)
+        dummy_state[0, 0, -1] = 1.0
+        dummy_state[0, 1, -1] = 0.5 
+        dummy_state[0, 2, -1] = 0.2
+        dummy_state[0, 3, -1] = 0.1 
+        dummy_state[0, 4, :A_DIM] = np.linspace(0.1, 0.6, A_DIM)
         dummy_state[0, 5, -1] = 0.8
 
         dummy_input = torch.tensor(dummy_state, dtype=torch.float32)

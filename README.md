@@ -1,58 +1,110 @@
-# Pensieve PPO
+# This is a fork of Pensieve PPO [Pensieve-PPO](https://github.com/godka/Pensieve-PPO)
 
-### Updates
 
-**May. 4, 2024:** We removed the Elastic, revised  BOLA, and add new baseline Comyco [3] and Genet [2].
+## Before running the project you need to setup the enivroment here are the suggested steps:
 
-**Jan. 26, 2024:** We are excited to announce significant updates to Pensieve-PPO! We have replaced TensorFlow with PyTorch, and we have achieved a similar training speed while training models that rival in performance.
+### create a python virtual environment
 
-*For the TensorFlow version, please check [Pensieve-PPO TF Branch](https://github.com/godka/Pensieve-PPO/tree/master).*
+`python3 -m venv venv`
 
-**Dec. 28, 2021:** In a previous update, we enhanced Pensieve-PPO with several state-of-the-art technologies, including Dual-Clip PPO and adaptive entropy decay.
+`source venv/bin/activate`
 
-## About Pensieve-PPO
 
-Pensieve-PPO is a user-friendly PyTorch implementation of Pensieve [1], a neural adaptive video streaming system. Unlike A3C, we utilize the Proximal Policy Optimization (PPO) algorithm for training.
+### Install requirements
 
-This stable version of Pensieve-PPO includes both the training and test datasets.
+`pip3 -r install requirements.txt`
 
-You can run the repository by executing the following command:
+### Before train your own model there are several steps you need to take to ensure you are training correctly
 
-```
-python train.py
-```
+### 1. Data prep
 
-The results will be evaluated on the test set (from HSDPA) every 300 epochs.
+#### 1.1 video segments
 
-## Tensorboard Integration
+- make sure that VIDEO_BIT_RATE has the right value for your video segment sizes
 
-To monitor the training process in real time, you can leverage Tensorboard. Simply run the following command:
+- the video segment sizes should be a folder containing files of named video_size_{n} where n is the bitrate level for example video_size_6
 
-```
-tensorboard --logdir=./
-```
+- The data should be located under ./src/video_data
 
-## Pretrained Model
+[Video data](https://github.com/godka/comyco-video-description-dataset)
 
-We have also added a pretrained model, which can be found at [this link](https://github.com/godka/Pensieve-PPO/tree/torch/src/pretrain). This model demonstrates a substantial improvement of 7.03% (from 0.924 to 0.989) in average Quality of Experience (QoE) compared to the original Pensieve model [1]. For a more detailed performance analysis, refer to the figures below:
+#### 1.2 network traces
 
-<p align="center">
-    <img src="src/baselines-br.png" width="50%"><img src="src/baselines-bs.png" width="50%">
-</p>
-<p align="center">
-    <img src="src/baselines-qoe.png" width="100%">
-</p>
-If you have any questions or require further assistance, please don't hesitate to reach out.
+- Network traces are a collection of csv files with these collumns Time_Seconds,DL_bitrate,Network_Type
 
-## Additional Reinforcement Learning Algorithms
+sample: 
 
-For more implementations of reinforcement learning algorithms, please visit the following branches:
+Time_Seconds,DL_bitrate,Network_Type
+0,0.765554716981,3G
+1.0010000000002037,0.929310689311,3G
+2.0210000000006403,0.930862745098,3G
+3.0310000000008586,1.18108514851,3G
+6.053000000001703,8.455,4G
+8.053000000001703,13.856,4G
+9.053000000001703,16.899,4G
+11.053000000001703,1.07322343595,3G
+12.07300000000214,1.53430588235,3G
+13.085000000004584,1.34545454545,3G
+14.08900000000176,1.01373705179,3G
+17.14100000000508,3.064,4G
+18.14100000000508,2.874,4G
+20.14100000000508,6.341,4G
+21.14100000000508,5.468,4G
+25.14100000000508,0.421,5G
+26.14100000000508,1.371,5G
 
-- DQN: [Pensieve-PPO DQN Branch](https://github.com/godka/Pensieve-PPO/tree/dqn)
-- SAC: [Pensieve-PPO SAC Branch](https://github.com/godka/Pensieve-PPO/tree/SAC) or [Pensieve-SAC Repository](https://github.com/godka/Pensieve-SAC)
+- for this experiment you can create as many csv files provided they are at minimum the size of the video provided.
 
-[1] Mao H, Netravali R, Alizadeh M. Neural adaptive video streaming with Pensieve[C]//Proceedings of the Conference of the ACM Special Interest Group on Data Communication. ACM, 2017: 197-210.
+the .csv files are in src/test_heterogenous and src/train_heterogenous
 
-[2] Xia, Zhengxu, et al. "Genet: automatic curriculum generation for learning adaptation in networking." Proceedings of the ACM SIGCOMM 2022 Conference. 2022.
+[3G Dataset](http://skuld.cs.umass.edu/traces/mmsys/2013/pathbandwidth/)
 
-[3] Huang, Tianchi, et al. "Comyco: Quality-aware adaptive video streaming via imitation learning." Proceedings of the 27th ACM international conference on multimedia. 2019.
+[4G Dataset](https://users.ugent.be/~jvdrhoof/dataset-4g/)
+
+[5G Dataset](https://github.com/uccmisl/5Gdataset/tree/master?tab=readme-ov-file)
+
+### 2. configure training parameters
+
+have a look at sr/train.py make sure the parameters passed make sense for your use cases
+
+have a look at rewardFunctions, the one designed and selected for this project is `reward5` you might want to design your own.
+
+*** Disclaimer: the reward functions designed are experimental and could not work as intended
+
+Finally before running the command update NAME in train.py so that you can reference your trained model later.
+
+### 3. Its time to train!! 
+
+run this command
+(you might need to run it with sudo)
+
+`python3 train.py`
+
+you will be presented with a tqdm loading bar which will estimate completion time after the first epoch
+
+after training you might want to visualize your results first you will need to test your model here how that could look like
+
+### 4. For testing
+
+run this command (possibly need sudo here as well)
+
+`python3 test.py ppo/heterogenous_switch_rate_tuned/nn_model_ep_80000.pth 0.222 2 3  80000 testingforoutput`
+
+where  
+- `ppo/heterogenous_switch_rate_tuned/nn_model_ep_80000.pth` is the path to your model
+
+- `0.222` is hyperparameter alpha
+
+- `2` is hyperparameter beta
+
+- `3` is hyperparameter gamma
+
+- `testingforoutput` is the name of the scheme that will be created
+
+### 5. Results
+
+Now that you ran the test you can add your new scheme `testingforoutput` in `SCHEMES` and run
+
+`python3 plot.py`
+
+you should see your plot in /src with the names defined in plot.py main
