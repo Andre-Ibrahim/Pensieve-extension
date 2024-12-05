@@ -14,7 +14,7 @@ TRAIN_SEQ_LEN = 100  # take as a train batch
 MODEL_SAVE_INTERVAL = 100
 VIDEO_BIT_RATE = np.array([200., 300., 480., 750., 1200., 1850., 2850., 4300., 5300.])  # Kbps
 BUFFER_NORM_FACTOR = 10.0
-CHUNK_TIL_VIDEO_END_CAP = 500.0
+CHUNK_TIL_VIDEO_END_CAP = 1000.0
 M_IN_K = 1000.0
 REBUF_PENALTY = 4.3  # 1 sec rebuffering -> 3 Mbps
 SMOOTH_PENALTY = 1
@@ -38,8 +38,6 @@ class ABREnv():
         self.last_bit_rate = DEFAULT_QUALITY
         self.buffer_size = 0.
         self.state = np.zeros((S_INFO, A_DIM))
-        print(self.state)
-        self.alpha = 0.4
         
     def seed(self, num):
         np.random.seed(num)
@@ -97,7 +95,7 @@ class ABREnv():
         self.time_stamp += sleep_time  # in ms
 
         # reward is video quality - rebuffer penalty - smooth penalty
-        reward = rf.RearwardFunction.reward_with_buffer_no_rebuff_switch_rate(self.alpha, self.beta, self.gamma, bit_rate, self.last_bit_rate, rebuf, delay, self.buffer_size, switch_rate)
+        reward = rf.RearwardFunction.reward5(self.alpha, self.beta, self.gamma, bit_rate, self.last_bit_rate, rebuf, delay, self.buffer_size, switch_rate)
 
         self.last_bit_rate = bit_rate
         state = np.roll(self.state, -1, axis=1)

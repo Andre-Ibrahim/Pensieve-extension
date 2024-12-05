@@ -5,6 +5,7 @@ COOKED_TRACE_FOLDER = './train_heterogenous/'
 
 
 def load_trace(cooked_trace_folder=COOKED_TRACE_FOLDER):
+    print('load trace', cooked_trace_folder)
     cooked_files = os.listdir(cooked_trace_folder)
     all_cooked_time = []
     all_cooked_bw = []

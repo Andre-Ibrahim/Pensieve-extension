@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>dash.js with TensorFlow.js</title>
     <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>  
 </head>
 <body>
     <h1>dash.js with TensorFlow.js</h1>
     <video id="videoPlayer" controls autoplay style="width: 100%;"></video>
+    <canvas id="throughputChart"></canvas>
+    <canvas id="bitrateChart"></canvas>
     <script src="main.js"></script>
 </body>
 </html>

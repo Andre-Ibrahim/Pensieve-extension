@@ -16,10 +16,10 @@ A_DIM = 9
 ACTOR_LR_RATE = 1e-4
 NUM_AGENTS = 1
 TRAIN_SEQ_LEN = 1000  # take as a train batch
-TRAIN_EPOCH = 80001
-MODEL_SAVE_INTERVAL = 10000
+TRAIN_EPOCH = 5000
+MODEL_SAVE_INTERVAL = 100
 RANDOM_SEED = 42
-NAME = 'heterogenous_switch_rate_tuned2_new_bitrate'
+NAME = 'hetereogenous_reward5_experiment4_rebuf2'
 SUMMARY_DIR = f'./ppo/{NAME}'
 MODEL_DIR = './models'
 TRAIN_TRACES = './train_hetereogenous/'
@@ -28,7 +28,7 @@ LOG_FILE = SUMMARY_DIR + '/log'
 mp.set_start_method('spawn', force=True)
 
 ALPHA = 0.8170262751188082
-BETA = 0.0022840214229752354
+BETA = 0.20
 GAMMA = 0.27566949441816124
 
 # create result directory
@@ -45,7 +45,7 @@ def testing(epoch, nn_model, log_file, alpha=ALPHA, beta=BETA, gamma=GAMMA):
     if not os.path.exists(TEST_LOG_FOLDER):
         os.makedirs(TEST_LOG_FOLDER)
     # run test script
-    os.system(f'python test.py {nn_model} {str(alpha)} {str(beta)} {str(gamma)} {str(epoch)} {NAME}')
+    os.system(f'python test.py {nn_model} {str(alpha)} {str(beta)} {str(gamma)} {"True"} {NAME}')
 
     # append test performance to the log
     rewards, entropies = [], []

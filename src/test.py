@@ -17,7 +17,7 @@ CRITIC_LR_RATE = 0.001
 VIDEO_BIT_RATE = [200, 300, 480, 750, 1200, 1850, 2850, 4300, 5300]  # Kbps
 # [200, 300, 480, 750, 1200, 1850, 2850, 4300, 5300]
 BUFFER_NORM_FACTOR = 10.0
-CHUNK_TIL_VIDEO_END_CAP = 48.0
+CHUNK_TIL_VIDEO_END_CAP = 1000
 M_IN_K = 1000.0
 REBUF_PENALTY = 4.3  # 1 sec rebuffering -> 3 Mbps
 SMOOTH_PENALTY = 1
@@ -34,7 +34,7 @@ ALPHA = float(sys.argv[2])
 BETA = float(sys.argv[3])
 GAMMA = float(sys.argv[4])
 
-epoch = sys.argv[5]
+training = sys.argv[5]
 name = sys.argv[6]
 LOG_FILE = f'./test_results/log_sim_ppo_{name}'
     
@@ -75,6 +75,14 @@ def main():
     entropy_record = []
     entropy_ = 0.5
     video_count = 0
+
+    totalbr = 0
+    count = 0
+
+    total_quality = 0
+
+    bitrate_counts = {}
+
     
     while True:  # serve video forever
         # the action is from the last decision
@@ -93,9 +101,7 @@ def main():
         #             - SMOOTH_PENALTY * np.abs(VIDEO_BIT_RATE[bit_rate] -
         #                                     VIDEO_BIT_RATE[last_bit_rate]) / M_IN_K \
         #             - delay / M_IN_K / BUFFER_NORM_FACTOR
-        
-        reward = rf.RearwardFunction.reward_with_buffer_no_rebuff_switch_rate(ALPHA, BETA, GAMMA, bit_rate, last_bit_rate, rebuf, delay, buffer_size, switch_rate)
-
+        reward = rf.RearwardFunction.reward5(ALPHA, BETA, GAMMA, bit_rate, last_bit_rate, rebuf, delay, buffer_size, switch_rate)
 
         r_batch.append(reward)
 
@@ -123,15 +129,38 @@ def main():
 
         # this should be S_INFO number of terms
         state[0, -1] = VIDEO_BIT_RATE[bit_rate] / float(np.max(VIDEO_BIT_RATE))  # last quality
+        print("state 0", state[0])
         state[1, -1] = buffer_size / BUFFER_NORM_FACTOR  # 10 sec
+        print("state 1", state[1])
         state[2, -1] = float(video_chunk_size) / float(delay) / M_IN_K  # kilo byte / ms
+        print("delay", delay)
+        print("state 2", state[2])
         state[3, -1] = float(delay) / M_IN_K / BUFFER_NORM_FACTOR  # 10 sec
+        print("state 3", state[3])
         state[4, :A_DIM] = np.array(next_video_chunk_sizes) / M_IN_K / M_IN_K  # mega byte
+        print("state 4", state[4])
         state[5, -1] = np.minimum(video_chunk_remain, CHUNK_TIL_VIDEO_END_CAP) / float(CHUNK_TIL_VIDEO_END_CAP)
-
+        print("state 5", state[5])
         action_prob = actor.predict(np.reshape(state, (1, S_INFO, A_DIM)))
+
         noise = np.random.gumbel(size=len(action_prob))
         bit_rate = np.argmax(np.log(action_prob) + noise)
+
+        if(training == 'False'):
+            bit_rate = np.argmax(action_prob)
+        
+        totalbr += np.argmax(action_prob)
+        total_quality += VIDEO_BIT_RATE[np.argmax(action_prob)]
+        count += 1
+
+        # Assuming `action_prob` is a numpy array with probabilities for each bitrate
+        selected_bitrate = np.argmax(action_prob)  # Get the index of the chosen bitrate
+
+        # Update the dictionary
+        if selected_bitrate in bitrate_counts:
+            bitrate_counts[selected_bitrate] += 1  # Increment count if bitrate already exists
+        else:
+            bitrate_counts[selected_bitrate] = 1
         
         s_batch.append(state)
         entropy_ = -np.dot(action_prob, np.log(action_prob))
@@ -163,6 +192,11 @@ def main():
 
             log_path = LOG_FILE + '_' + all_file_names[net_env.trace_idx]
             log_file = open(log_path, 'w')
+
+    print("average bitrate: ", totalbr/count)
+    print("average quality: ", total_quality/count)
+    print(count)
+    print(bitrate_counts)
 
 
 if __name__ == '__main__':

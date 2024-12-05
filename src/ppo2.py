@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
+from tqdm import trange
 
 FEATURE_NUM = 128
 ACTION_EPS = 1e-4
@@ -25,7 +26,7 @@ class Actor(nn.Module):
         self.conv2_actor = nn.Linear(self.s_dim[1], FEATURE_NUM)
         self.conv3_actor = nn.Linear(self.a_dim, FEATURE_NUM)
         self.fc3_actor = nn.Linear(1, FEATURE_NUM)
-        self.fc4_actor = nn.Linear(FEATURE_NUM * self.s_dim[0], FEATURE_NUM)
+        self.fc4_actor = nn.Linear(FEATURE_NUM * self.s_dim[0], FEATURE_NUM)        
         self.pi_head = nn.Linear(FEATURE_NUM, action_dim)
 
     def forward(self, inputs):
@@ -119,7 +120,6 @@ class Network():
             dual_loss = torch.where(adv < 0, torch.max(ppo2loss, 3. * adv), ppo2loss)
             loss_entropy = torch.sum(-pi * torch.log(pi), dim=1, keepdim=True)
 
-            #val = val.view(-1)
             loss = -dual_loss.mean() + 10. * F.mse_loss(val, v_batch) - self._entropy_weight * loss_entropy.mean()
 
             self.optimizer.zero_grad()

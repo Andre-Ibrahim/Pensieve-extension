@@ -23,8 +23,14 @@ ChunkSize = 4
 LW = 1.5
 LOG = './baselines/'
 
-SCHEMES = ['hete_switch_rate_tuned_new_bitrate_10k', 'hete_switch_rate_tune_nbr', 'heterogenous_switch_rate_beta_25', 'heterogenous_switch_rate_tuned', 'heterogenous_switch_rate_tuned_no_smootheness', 'heterogenous_switch_rate_only', 'alpha_325_buff_size_no_delay', 'heterogenous_switch_rate', 'retrain_hete_vid']
-labels = ['hete_swi_rat_tu_n_br', 'hete_switch_rate_tune_nbr', 'hete_swi_ra_beta_25', 'hete_swi_rate_tuned', 'hete_swi_rat_tu_no_smo', 'hete_swi_rate_only', 'alpha_325', 'hete_switch_rate', 'retrain_hete_vid']
+#SCHEMES = ['hetereogenous_reward5_experiment3', 'hete_switch_rate_tune_nbr', 'heterogenous_switch_rate_beta_25', 'heterogenous_switch_rate_tuned', 'heterogenous_switch_rate_tuned_no_smootheness', 'retrained_200Mbps_br_only', 'switch_rate_tuned2_new_br_more_traces', 'heterogenous_switch_rate', 'retrain_hete_vid']
+
+# SCHEMES = ['hetereogenous_reward5_experiment2', 'hetereogenous_reward5_experiment2_200Mbps_control', 'retrain_hete_vid']
+
+SCHEMES = ['hetereogenous_reward5_experiment2', 'hetereogenous_reward5_experiment2_200Mbps_control', 'hetereogenous_reward5_experiment4_rebuf2', 'hetereogenous_reward5_experiment4_rebuf0']
+#labels = ['hete_rew_exp', 'he_sw_ra_tu_nbr', 'hete_swi_ra_beta_25', 'hete_swi_rate_tuned', 'hete_swi_rat_tu_no_smo', 'retrained_200Mbps_br_only', 'swi_rate_tu2_nbr_mt', 'hete_switch_rate', 'retrain_hete_vid']
+labels = ['rebuffer penalty 2', 'ppo+ vs 200Mbps', 'rebuffer penalty 1', 'rebuffer penalty 0']
+
 lines = ['-', '--', '-.', ':', '-', '--', ':', '--', ':', '-']  # '--', '-.', ':', '-', '--'
 modern_academic_colors = ['#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F', '#EDC948', '#FF9DA7', '#9C755F', '#000000']  # '#59A14F', '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F'
 
@@ -171,7 +177,7 @@ def smo_rebuf(outputs):
 
     ax.set_xlabel('Time Spent on Stall (%)')
     ax.set_ylabel('Bitrate Smoothness (mbps)')
-    ax.set_ylim(0.05, max_bitrate + 0.05)
+    ax.set_ylim(0.05, 7)
 
     ax.grid(linestyle='--', linewidth=1., alpha=0.5)
     ax.spines['top'].set_visible(False)
@@ -319,7 +325,7 @@ def rebuffering_vs_time(outputs):
     matplotlib.rc('font', **font)
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    ax.set_ylim(0, 200)
+    ax.set_ylim(0, 400)
 
     plt.subplots_adjust(left=0.14, bottom=0.16, right=0.96, top=0.96)
 
@@ -389,7 +395,7 @@ def average_quality_per_second(outputs):
     fig, ax = plt.subplots(figsize=(8, 6))
     plt.subplots_adjust(left=0.14, bottom=0.16, right=0.96, top=0.96)
 
-    ax.set_ylim(0, 6)
+    ax.set_ylim(0, 7)
 
     for idx, scheme in enumerate(SCHEMES):
         time_all = []
@@ -506,7 +512,7 @@ def average_smothness_per_second(outputs):
     plt.close()
 
 def quality_per_second(outputs):
-    label = 'hete_switch_rate_tune_nbr'
+    label = 'hetereogenous_reward5_experiment4_rebuf2'
     # os.system('cp ./test_results/* ' + LOG)
     markers = ['o','x','v','^','>','<','s','p','*','h','H','D','d','1']
     
@@ -529,7 +535,7 @@ def quality_per_second(outputs):
         #print(logfile)
         if label in logfile:
             print(count)
-            if count <= 2:
+            if count <= 4:
                 count += 1
                 continue
 
@@ -589,6 +595,8 @@ if __name__ == '__main__':
     # smo_rebuf('baselines-sr')
     # bitrate_smo('baselines-bs')
     # qoe_cdf('baselines-qoe')
+    
+    
     rebuffering_vs_time('homogenous')
     average_quality_per_second('homogenous')
     average_smothness_per_second('homogenous')
